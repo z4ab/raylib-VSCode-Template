@@ -70,7 +70,7 @@ void Collide()
 {
     for (int i = 0; i < 5; i++)
     {
-        if (moles[i].up && CheckCollisionPointCircle(mallet.position, Vector2Add(Vector2Scale(moles[i].position, scale), (Vector2){-50, -50}), 50))
+        if (moles[i].up && moles[i].timer == 0 && CheckCollisionPointCircle(mallet.position, Vector2Add(Vector2Scale(moles[i].position, scale), (Vector2){-50, -50}), 50))
         {
             moles[i].animation.playing = false;
             moles[i].animation.currentFrame = 0;
