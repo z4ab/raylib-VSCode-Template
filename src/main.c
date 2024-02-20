@@ -1,27 +1,23 @@
-#include "raylib.h"
-#include "second.h"
+#include "game.h"
 
-int main() 
+#define SCREEN_WIDTH 320
+#define SCREEN_HEIGHT 180
+
+#define FRAME_RATE 60
+
+//------------------------------------------------------------------------------------
+// Program main entry point
+//------------------------------------------------------------------------------------
+int main(void)
 {
     // Initialization
     //--------------------------------------------------------------------------------------
-    const int screenWidth = 800;
-    const int screenHeight = 450;
-	
-	Fun1();
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "my game");
+    ToggleFullscreen();
 
-    InitWindow(screenWidth, screenHeight, "raylib");
+    Init();
 
-    Camera camera = { 0 };
-    camera.position = (Vector3){ 10.0f, 10.0f, 8.0f };
-    camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };
-    camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
-    camera.fovy = 60.0f;
-    camera.projection = CAMERA_PERSPECTIVE;
-    
-    Vector3 cubePosition = { 0 };
-
-    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
+    SetTargetFPS(FRAME_RATE);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
     // Main game loop
@@ -29,30 +25,22 @@ int main()
     {
         // Update
         //----------------------------------------------------------------------------------
-        UpdateCamera(&camera, CAMERA_ORBITAL);
+        // TODO: Update your variables here
         //----------------------------------------------------------------------------------
+        Update();
 
         // Draw
         //----------------------------------------------------------------------------------
         BeginDrawing();
 
             ClearBackground(RAYWHITE);
-
-            BeginMode3D(camera);
-
-                DrawCube(cubePosition, 2.0f, 2.0f, 2.0f, RED);
-                DrawCubeWires(cubePosition, 2.0f, 2.0f, 2.0f, MAROON);
-                DrawGrid(10, 1.0f);
-
-            EndMode3D();
-
-            DrawText("This is a raylib example", 10, 40, 20, DARKGRAY);
-
-            DrawFPS(10, 10);
+            Draw();
 
         EndDrawing();
         //----------------------------------------------------------------------------------
     }
+
+    Unload();
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
