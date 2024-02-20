@@ -2,105 +2,203 @@
 #include "raymath.h"
 #include <stdio.h>
 
-typedef struct Player
+typedef struct Animation
+{
+    int frameCounter;
+    int currentFrame;
+    Rectangle frameRec;
+    bool playing;
+} Animation;
+
+typedef struct Mallet
 {
     Vector2 position;
-    int speed;
-    int health;
-} Player;
+    bool whacking;
 
-typedef struct Enemy
+    Animation animation;
+} Mallet;
+
+typedef struct Mole
 {
     Vector2 position;
-    int speed;
-    bool dead;
-} Enemy;
+    bool up;
+    int timer; // frames till gone
 
-#define MAX_ENEMIES 3
+    Animation animation;
+} Mole;
 
-Player p;
-Enemy enemies[MAX_ENEMIES];
+Mallet mallet;
+Mole moles[5];
 
-Texture2D walkAnimation;
-Rectangle frameRec;
-int frameCounter;
-int currentFrame;
+Texture2D backgroundTexture;
+Texture2D malletTexture;
+Texture2D moleTexture;
 
-void Init() 
+#define scale 4
+
+int score;
+int highscore;
+int gameTimer;
+
+void Animate(Animation *animation, int width, int frameCount, int delay)
+{
+    if (!animation->playing || gameTimer == 0)
+    {
+        animation->frameRec.x = (float)animation->currentFrame * (float)width / frameCount;
+        return;
+    }
+
+    animation->frameCounter++;
+    if (animation->frameCounter >= delay)
+    {
+        animation->frameCounter = 0;
+        animation->currentFrame++;
+
+        if (animation->currentFrame > frameCount - 1)
+        {
+            if (frameCount == 4) // if mallet (yes very bizzare logic)
+                animation->currentFrame = 0;
+            else
+                animation->currentFrame = frameCount - 1;
+            animation->playing = false;
+        }
+        animation->frameRec.x = (float)animation->currentFrame * (float)width / frameCount;
+    }
+}
+
+void Collide()
+{
+    for (int i = 0; i < 5; i++)
+    {
+        if (moles[i].up && CheckCollisionPointCircle(mallet.position, Vector2Add(Vector2Scale(moles[i].position, scale), (Vector2){-50, -50}), 50))
+        {
+            moles[i].animation.playing = false;
+            moles[i].animation.currentFrame = 0;
+            moles[i].animation.frameCounter = 0;
+            moles[i].up = false;
+            score++;
+            moles[i].timer = GetRandomValue(50,200);
+        }
+    }
+}
+
+void Init()
 {
     // Initialize animation
-    walkAnimation = LoadTexture("textures/walk.png");
-    frameRec = (Rectangle) {0.0f, 0.0f, (float)walkAnimation.width/8, (float)walkAnimation.height};
-    frameCounter = 0;
-    currentFrame = 0;
+    backgroundTexture = LoadTexture("textures/whack.png");
+    malletTexture = LoadTexture("textures/mallet.png");
+    moleTexture = LoadTexture("textures/mole.png");
 
-    // Initialize variables
-    p.position = (Vector2) { 360, 200 };
-    p.speed = 5;
-    p.health = 100;
-
-    for (int i = 0; i < MAX_ENEMIES; i++)
+    mallet.animation.frameRec = (Rectangle){0.0f, 0.0f, (float)malletTexture.width / 4, (float)malletTexture.height};
+    mallet.animation.frameCounter = 0;
+    mallet.animation.currentFrame = 0;
+    mallet.animation.playing = false;
+    for (int i = 0; i < 5; i++)
     {
-        enemies[i].speed = 2;
-        enemies[i].dead = false;
+        moles[i].animation.frameRec = (Rectangle){0.0f, 0.0f, (float)moleTexture.width / 5, (float)moleTexture.height};
+        moles[i].animation.frameCounter = 0;
+        moles[i].animation.currentFrame = 0;
+        moles[i].animation.playing = true;
     }
-    enemies[0].position = (Vector2) { 100, 100 };
-    enemies[1].position = (Vector2) { 500, 40 };
-    enemies[2].position = (Vector2) { 50, 300 };
+    moles[0].position = (Vector2){44, 102};
+    moles[1].position = (Vector2){105, 102};
+    moles[2].position = (Vector2){166, 102};
+    moles[3].position = (Vector2){71, 134};
+    moles[4].position = (Vector2){146, 134};
+
+    score = 0;
+    highscore = 0;
+
+    gameTimer = 30*30; // depends on frame rate
 }
 
 void Update()
 {
-    // Get input and move player
-    Vector2 axis = Vector2Zero();
-    axis.y = IsKeyDown(KEY_S) - IsKeyDown(KEY_W);
-    axis.x = IsKeyDown(KEY_D) - IsKeyDown(KEY_A);
-    axis = Vector2Normalize(axis);
+    if (IsKeyPressed(KEY_R)) Init();
+    // Update mallet position
+    mallet.position = GetMousePosition();
+    mallet.position.x += -90;
+    mallet.position.y += -65;
 
-    p.position = Vector2Add(p.position, Vector2Scale(axis, p.speed));
+    // Animate sprites
+    Animate(&mallet.animation, malletTexture.width, 4, 2);
 
-    // Player animation
-    frameCounter++;
-    if (frameCounter >= (60/10))
+    // Handle game end
+    if (gameTimer == 0)
     {
-        frameCounter = 0;
-        currentFrame++;
-        
-        if (currentFrame > 7) currentFrame = 0;
-        frameRec.x = (float)currentFrame*(float)walkAnimation.width/8;
-    }
-
-    // Update enemies
-    for (int i = 0; i < MAX_ENEMIES; i++)
-    {
-        if (enemies[i].dead) continue;
-        Vector2 toPlayer = Vector2Normalize(Vector2Subtract(p.position, enemies[i].position));
-        enemies[i].position = Vector2Add(enemies[i].position, Vector2Scale(toPlayer, enemies[i].speed));
-        if (CheckCollisionCircleRec(enemies[i].position, 10, (Rectangle) {p.position.x, p.position.y, 50, 80}))
-        {
-            p.health -= 1;
-            enemies[i].dead = true;
+        for (int i = 0; i < 5; i++) { 
+            moles[i].animation.currentFrame = 0;
         }
+    } else {
+        gameTimer--;
+    }
+    // Animate moles
+    for (int i = 0; i < 5; i++)
+    {
+        if (moles[i].timer == 0)
+        {
+           moles[i].animation.playing = true;
+        } else {
+            moles[i].timer--;
+        }
+        Animate(&moles[i].animation, moleTexture.width, 5, 3);
+        if (!moles[i].animation.playing) moles[i].up = true;
     }
 
+    if (!mallet.animation.playing && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    {
+        Collide();
+        mallet.animation.playing = true;
+    }
 }
 
 void Draw()
 {
-    //DrawRectangle(p.position.x, p.position.y, 50, 80, BLACK);
-    //DrawTexture(walkAnimation, p.position.x, p.position.y, BLACK);
-    DrawTextureRec(walkAnimation, frameRec, p.position, WHITE);
+    // DrawRectangle(p.position.x, p.position.y, 50, 80, BLACK);
+    DrawTexturePro(
+        backgroundTexture,
+        (Rectangle){0, 0, backgroundTexture.width, backgroundTexture.height},
+        (Rectangle){0, 0, backgroundTexture.width * scale, backgroundTexture.height * scale},
+        (Vector2){0, 0},
+        0,
+        WHITE);
+    // DrawTexture(backgroundTexture, 0, 0, WHITE);
 
-    for (int i = 0; i < MAX_ENEMIES; i++)
+    for (int i = 0; i < 5; i++)
     {
-        if (!enemies[i].dead) DrawCircleV(enemies[i].position, 10, RED);
+        Mole m = moles[i];
+        //DrawCircle(moles[i].position.x*scale, moles[i].position.y*scale,50, WHITE);
+        DrawTexturePro(
+            moleTexture,
+            m.animation.frameRec,
+            (Rectangle){m.position.x * scale, m.position.y * scale, moleTexture.width / 5 * scale, moleTexture.height * scale},
+            (Vector2){0, 0},
+            0,
+            WHITE);
     }
     char str[3];
-    sprintf(str, "%d", p.health);
-    DrawText(str, 10, 10, 32, BLACK);
+    sprintf(str, "%d", score);
+    DrawText(str, 275, 260, 32, RED);
+
+    char str2[3];
+    sprintf(str2, "%d", gameTimer/30); // depends on frame rate
+    DrawText(str2, 615, 260, 32, RED);
+
+    DrawText("WHACK-A-MOLE", 270, 50, 48, GREEN);
+    if (gameTimer == 0) DrawText("GAME OVER", 350, 150, 36, RED);
+
+    DrawTexturePro(
+        malletTexture,
+        mallet.animation.frameRec,
+        (Rectangle){mallet.position.x, mallet.position.y, malletTexture.width / 4 * scale, malletTexture.height * scale},
+        (Vector2){0, 0},
+        0,
+        WHITE);
 }
 
 void Unload()
 {
-    UnloadTexture(walkAnimation);
+    UnloadTexture(backgroundTexture);
+    UnloadTexture(moleTexture);
+    UnloadTexture(malletTexture);
 }

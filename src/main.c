@@ -1,9 +1,9 @@
 #include "game.h"
 
-#define SCREEN_WIDTH 320
-#define SCREEN_HEIGHT 180
+#define SCREEN_WIDTH 240*4
+#define SCREEN_HEIGHT 180*4
 
-#define FRAME_RATE 60
+#define FRAME_RATE 30
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -13,7 +13,7 @@ int main(void)
     // Initialization
     //--------------------------------------------------------------------------------------
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "my game");
-    ToggleFullscreen();
+    //ToggleFullscreen();
 
     Init();
 
